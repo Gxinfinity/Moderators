@@ -3,13 +3,12 @@ from PIL import Image
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (Bhai dhyan se bharna) ---
 API_ID = 27209067
 API_HASH = "0bb2571bd490320a5c9209d4bf07902e"
 BOT_TOKEN = "" 
-
 LOG_CHANNEL_ID = -1003506657299 
-SUDO_USERS = [7487670897, 8409591285] # Owner IDs
+SUDO_USERS = [7487670897, 8409591285] 
 
 API_USER = "1641898842"
 API_SECRET = "BrqWQkJqe3Epgse73zWTwrsYbDgpZG6X"
@@ -21,48 +20,26 @@ GBAN_LIST = set()
 
 if not os.path.exists(DOWNLOAD_DIR): os.makedirs(DOWNLOAD_DIR)
 
-app = Client("A1_ULTIMATE_TURBO", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-
-# --- UI INTERFACE ---
-
-DM_START_TEXT = """
-✨ **ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴀ1 ɴsғᴡ ᴅɪʀᴇᴄᴛᴏʀ** ✨
-━━━━━━━━━━━━━━━━━━━━
-🛡️ **ɪ ᴀᴍ ᴛʜᴇ ᴍᴏsᴛ ᴘᴏᴡᴇʀғᴜʟ ɢᴜᴀʀᴅɪᴀɴ**
-Status: `Hyper-Sonic God Mode Active` 🚀
-━━━━━━━━━━━━━━━━━━━━
-"""
-
-BAN_CARD = """
-✨ **ᴀ1 ɴsғᴡ ᴅɪʀᴇᴄᴛᴏʀ** ✨
-━━━━━━━━━━━━━━━━━━━━
-🚫 **ᴜsᴇʀ ʙᴀɴɴᴇᴅ ɪɴsᴛᴀɴᴛʟʏ**
-━━━━━━━━━━━━━━━━━━━━
-👤 **User:** {user}
-🆔 **ID:** `{user_id}`
-📝 **Reason:** `{reason}`
-🛠️ **Action:** `Full Hyper Cleanup + Ban`
-━━━━━━━━━━━━━━━━━━━━
-"""
+app = Client("A1_ULTIMATE_FINAL_FIX", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # --- CORE TURBO FUNCTIONS ---
 
 async def a1_sonic_cleanup(client, chat_id, user_id):
-    """Fastest batch deletion for history wipe"""
+    """Background mein user ki history saaf karne ka fastest logic"""
     msg_ids = []
     try:
         async for msg in client.get_chat_history(chat_id, limit=300):
             if msg.from_user and msg.from_user.id == user_id:
                 msg_ids.append(msg.id)
-                if len(msg_ids) >= 100: # Batch size for Telegram API
+                if len(msg_ids) >= 100: # Telegram batch limit
                     await client.delete_messages(chat_id, msg_ids)
                     msg_ids = []
         if msg_ids: await client.delete_messages(chat_id, msg_ids)
-    except: pass
+        print(f"✅ History cleaned for User {user_id}")
+    except Exception as e: print(f"❌ Cleanup Error: {e}")
 
 def check_nsfw(file_path):
     if not file_path or not os.path.exists(file_path): return False
-    # Conversion logic for WebP/GIF/PNG
     if file_path.endswith((".webp", ".png", ".gif")):
         try:
             img = Image.open(file_path).convert("RGB")
@@ -77,17 +54,18 @@ def check_nsfw(file_path):
             res = r.json()
             if res.get('status') == 'success':
                 n = res['nudity']
-                # Super sensitive threshold (0.10)
+                # Strict threshold (0.10) for maximum detection
                 if n['sexual_display'] > 0.10 or n['erotica'] > 0.10 or n['sexual_activity'] > 0.10: return True
-    except: pass
+    except Exception as e: print(f"❌ Sightengine Error: {e}")
     return False
 
 # --- GUARDIAN HANDLERS ---
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_dm(client, message):
+    text = "✨ **ᴀ1 ɴsғᴡ ᴅɪʀᴇᴄᴛᴏʀ** ✨\n━━━━━━━━━━━━\n🛡️ **God Mode Active!**"
     buttons = InlineKeyboardMarkup([[InlineKeyboardButton("➕ Add Me", url=f"https://t.me/{(await client.get_me()).username}?startgroup=true")]])
-    await message.reply_text(DM_START_TEXT, reply_markup=buttons)
+    await message.reply_text(text, reply_markup=buttons)
 
 @app.on_message(filters.group & ~filters.service)
 async def a1_guardian(client, message: Message):
@@ -95,13 +73,14 @@ async def a1_guardian(client, message: Message):
     u_id = message.from_user.id
     if u_id in GBAN_LIST: await message.chat.ban_member(u_id); await message.delete(); return
 
+    # Admin Check
     is_admin = False
     try:
         member = await client.get_chat_member(message.chat.id, u_id)
         if member.status in [member.status.ADMINISTRATOR, member.status.OWNER]: is_admin = True
     except: pass
 
-    # 1. MEDIA SCAN (GIF, ZIP, Video, Sticker)
+    # 1. MEDIA SCAN (GIF, ZIP, JPG, Sticker, Video)
     if message.photo or message.sticker or message.video or message.animation or message.document:
         unique_name = f"{DOWNLOAD_DIR}{u_id}_{message.id}_{random.randint(100,999)}"
         file_path = None
@@ -109,7 +88,6 @@ async def a1_guardian(client, message: Message):
             file_path = await message.download(file_name=unique_name)
             is_bad = False
             
-            # ZIP Internal Scan
             if message.document and message.document.file_name.endswith('.zip'):
                 with zipfile.ZipFile(file_path, 'r') as zf:
                     z_tmp = f"{DOWNLOAD_DIR}unzip_{message.id}"; zf.extractall(z_tmp)
@@ -119,7 +97,6 @@ async def a1_guardian(client, message: Message):
                                 if check_nsfw(os.path.join(r, f)): is_bad = True; break
                     shutil.rmtree(z_tmp)
             
-            # GIF & Video Frame Scan
             elif message.animation or message.video or (message.sticker and message.sticker.is_video):
                 cap = cv2.VideoCapture(file_path); cap.set(cv2.CAP_PROP_POS_FRAMES, 5)
                 ret, frame = cap.read()
@@ -130,16 +107,17 @@ async def a1_guardian(client, message: Message):
             else: is_bad = check_nsfw(file_path)
 
             if is_bad:
-                await message.delete() # Admin content also deleted
+                await message.delete() # Admin ka bhi uda do
                 if not is_admin:
                     await message.chat.ban_member(u_id)
                     asyncio.create_task(a1_sonic_cleanup(client, message.chat.id, u_id))
-                    await message.reply_text(BAN_CARD.format(user=message.from_user.mention, user_id=u_id, reason="NSFW Content Detected"))
-                else: await message.reply("⚠️ **Admin Alert!** NSFW media removed.")
-        except: pass
+                    await message.reply(f"🚫 **Action:** `Direct Ban`\n👤 **User:** {message.from_user.mention}\n📝 **Reason:** `NSFW Media Detected`")
+                else: await message.reply("⚠️ **Admin Alert!** NSFW media removed instantly.")
+        except Exception as e: print(f"❌ Scan Error: {e}")
         finally:
             if file_path and os.path.exists(file_path): os.remove(file_path)
 
+# 2. JOIN GUARD (Name, Bio & PFP)
 @app.on_message(filters.group & filters.new_chat_members)
 async def join_guard(client, message: Message):
     for u in message.new_chat_members:
@@ -147,20 +125,17 @@ async def join_guard(client, message: Message):
             full_user = await client.get_users(u.id)
             bio, name = (full_user.bio or "").lower(), f"{u.first_name} {u.username or ''}".lower()
             
-            # Bio Link Warnings & Mute
             if "http" in bio or "t.me/" in bio:
                 BIO_WARNS[u.id] = BIO_WARNS.get(u.id, 0) + 1
                 if BIO_WARNS[u.id] >= 3:
                     await message.chat.restrict_member(u.id, ChatPermissions(can_send_messages=False))
                     await message.reply(f"🔇 {u.mention} muted for Bio-Link warning 3/3.")
                 else:
-                    await message.reply(f"⚠️ {u.mention}, Bio links allow nahi hain! **Warning {BIO_WARNS[u.id]}/3**")
+                    await message.reply(f"⚠️ {u.mention}, Bio links are not allowed! **Warning {BIO_WARNS[u.id]}/3**")
 
-            # NSFW Name/Bio Direct Ban
             if any(word in name for word in BAD_WORDS) or any(word in bio for word in BAD_WORDS):
                 await message.chat.ban_member(u.id); continue
 
-            # PFP Scan
             photos = [p async for p in client.get_chat_photos(u.id, limit=1)]
             if photos:
                 path = await client.download_media(photos[0].file_id, file_name=f"{DOWNLOAD_DIR}pfp_{u.id}")
@@ -170,11 +145,13 @@ async def join_guard(client, message: Message):
                 if os.path.exists(path): os.remove(path)
         except: pass
 
-@app.on_message(filters.command("gban") & filters.user(SUDO_USERS))
-async def gban_cmd(client, message):
-    if not message.reply_to_message: return
-    uid = message.reply_to_message.from_user.id
-    GBAN_LIST.add(uid); await message.chat.ban_member(uid); await message.reply("🚫 **Global Ban Active!**")
+@app.on_message(filters.command("check") & filters.group)
+async def health_check(client, message):
+    me = await client.get_chat_member(message.chat.id, "me")
+    report = (f"🚫 Ban: {'✅' if me.privileges.can_restrict_members else '❌'}\n"
+              f"🗑️ Delete: {'✅' if me.privileges.can_delete_messages else '❌'}\n"
+              f"📊 Supergroup: {'✅' if message.chat.type.name == 'SUPERGROUP' else '❌'}")
+    await message.reply(report)
 
-print("🚀 A1 FINAL TURBO GOD MODE (ALL FEATURES) IS LIVE...")
+print("🚀 A1 FINAL GOD MODE IS LIVE...")
 app.run()
