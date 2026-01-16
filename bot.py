@@ -6,10 +6,10 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 # --- CONFIGURATION ---
 API_ID = 27209067
 API_HASH = "0bb2571bd490320a5c9209d4bf07902e"
-BOT_TOKEN = "YAHAN_APNA_TOKEN" 
+BOT_TOKEN = "" 
 
 LOG_CHANNEL_ID = -1003506657299 
-SUDO_USERS = [7487670897, 8409591285] 
+SUDO_USERS = [7487670897, 8409591285] # Owner IDs
 
 API_USER = "1641898842"
 API_SECRET = "BrqWQkJqe3Epgse73zWTwrsYbDgpZG6X"
@@ -21,15 +21,15 @@ GBAN_LIST = set()
 
 if not os.path.exists(DOWNLOAD_DIR): os.makedirs(DOWNLOAD_DIR)
 
-app = Client("A1_TURBO_GOD_FINAL", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client("A1_ULTIMATE_TURBO", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# --- UI INTERFACE DESIGNS ---
+# --- UI INTERFACE ---
 
 DM_START_TEXT = """
 ✨ **ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴀ1 ɴsғᴡ ᴅɪʀᴇᴄᴛᴏʀ** ✨
 ━━━━━━━━━━━━━━━━━━━━
 🛡️ **ɪ ᴀᴍ ᴛʜᴇ ᴍᴏsᴛ ᴘᴏᴡᴇʀғᴜʟ ɢᴜᴀʀᴅɪᴀɴ**
-Status: `Hyper-Sonic Turbo Mode Active` 🚀
+Status: `Hyper-Sonic God Mode Active` 🚀
 ━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -48,13 +48,13 @@ BAN_CARD = """
 # --- CORE TURBO FUNCTIONS ---
 
 async def a1_sonic_cleanup(client, chat_id, user_id):
-    """Batch deletion for 1000x speed history wipe"""
+    """Fastest batch deletion for history wipe"""
     msg_ids = []
     try:
         async for msg in client.get_chat_history(chat_id, limit=300):
             if msg.from_user and msg.from_user.id == user_id:
                 msg_ids.append(msg.id)
-                if len(msg_ids) >= 100: # Telegram batch limit
+                if len(msg_ids) >= 100: # Batch size for Telegram API
                     await client.delete_messages(chat_id, msg_ids)
                     msg_ids = []
         if msg_ids: await client.delete_messages(chat_id, msg_ids)
@@ -62,24 +62,27 @@ async def a1_sonic_cleanup(client, chat_id, user_id):
 
 def check_nsfw(file_path):
     if not file_path or not os.path.exists(file_path): return False
+    # Conversion logic for WebP/GIF/PNG
     if file_path.endswith((".webp", ".png", ".gif")):
         try:
             img = Image.open(file_path).convert("RGB")
             t_path = file_path + ".jpg"; img.save(t_path, "JPEG")
             file_path = t_path
         except: pass
+    
     params = {'models': 'nudity-2.0', 'api_user': API_USER, 'api_secret': API_SECRET}
     try:
-        r = requests.post('https://api.sightengine.com/1.0/check.json', files={'media': open(file_path, 'rb')}, data=params)
-        res = r.json()
-        if res.get('status') == 'success':
-            n = res['nudity']
-            # Strict threshold
-            if n['sexual_display'] > 0.15 or n['erotica'] > 0.15: return True
+        with open(file_path, 'rb') as f:
+            r = requests.post('https://api.sightengine.com/1.0/check.json', files={'media': f}, data=params)
+            res = r.json()
+            if res.get('status') == 'success':
+                n = res['nudity']
+                # Super sensitive threshold (0.10)
+                if n['sexual_display'] > 0.10 or n['erotica'] > 0.10 or n['sexual_activity'] > 0.10: return True
     except: pass
     return False
 
-# --- HANDLERS ---
+# --- GUARDIAN HANDLERS ---
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_dm(client, message):
@@ -98,7 +101,7 @@ async def a1_guardian(client, message: Message):
         if member.status in [member.status.ADMINISTRATOR, member.status.OWNER]: is_admin = True
     except: pass
 
-    # 1. MEDIA & GIF & ZIP SCAN (Hyper-Sonic)
+    # 1. MEDIA SCAN (GIF, ZIP, Video, Sticker)
     if message.photo or message.sticker or message.video or message.animation or message.document:
         unique_name = f"{DOWNLOAD_DIR}{u_id}_{message.id}_{random.randint(100,999)}"
         file_path = None
@@ -106,16 +109,17 @@ async def a1_guardian(client, message: Message):
             file_path = await message.download(file_name=unique_name)
             is_bad = False
             
+            # ZIP Internal Scan
             if message.document and message.document.file_name.endswith('.zip'):
                 with zipfile.ZipFile(file_path, 'r') as zf:
-                    z_tmp = f"{DOWNLOAD_DIR}unzip_{message.id}"
-                    zf.extractall(z_tmp)
+                    z_tmp = f"{DOWNLOAD_DIR}unzip_{message.id}"; zf.extractall(z_tmp)
                     for r, _, files in os.walk(z_tmp):
                         for f in files:
                             if f.lower().endswith(('.jpg', '.png', '.webp')):
                                 if check_nsfw(os.path.join(r, f)): is_bad = True; break
                     shutil.rmtree(z_tmp)
             
+            # GIF & Video Frame Scan
             elif message.animation or message.video or (message.sticker and message.sticker.is_video):
                 cap = cv2.VideoCapture(file_path); cap.set(cv2.CAP_PROP_POS_FRAMES, 5)
                 ret, frame = cap.read()
@@ -126,12 +130,12 @@ async def a1_guardian(client, message: Message):
             else: is_bad = check_nsfw(file_path)
 
             if is_bad:
-                await message.delete()
+                await message.delete() # Admin content also deleted
                 if not is_admin:
                     await message.chat.ban_member(u_id)
                     asyncio.create_task(a1_sonic_cleanup(client, message.chat.id, u_id))
-                    await message.reply_text(BAN_CARD.format(user=message.from_user.mention, user_id=u_id, reason="NSFW Media Detected"))
-                else: await message.reply("⚠️ **Admin Alert!** NSFW media removed instantly.")
+                    await message.reply_text(BAN_CARD.format(user=message.from_user.mention, user_id=u_id, reason="NSFW Content Detected"))
+                else: await message.reply("⚠️ **Admin Alert!** NSFW media removed.")
         except: pass
         finally:
             if file_path and os.path.exists(file_path): os.remove(file_path)
@@ -143,6 +147,7 @@ async def join_guard(client, message: Message):
             full_user = await client.get_users(u.id)
             bio, name = (full_user.bio or "").lower(), f"{u.first_name} {u.username or ''}".lower()
             
+            # Bio Link Warnings & Mute
             if "http" in bio or "t.me/" in bio:
                 BIO_WARNS[u.id] = BIO_WARNS.get(u.id, 0) + 1
                 if BIO_WARNS[u.id] >= 3:
@@ -151,9 +156,11 @@ async def join_guard(client, message: Message):
                 else:
                     await message.reply(f"⚠️ {u.mention}, Bio links allow nahi hain! **Warning {BIO_WARNS[u.id]}/3**")
 
+            # NSFW Name/Bio Direct Ban
             if any(word in name for word in BAD_WORDS) or any(word in bio for word in BAD_WORDS):
                 await message.chat.ban_member(u.id); continue
 
+            # PFP Scan
             photos = [p async for p in client.get_chat_photos(u.id, limit=1)]
             if photos:
                 path = await client.download_media(photos[0].file_id, file_name=f"{DOWNLOAD_DIR}pfp_{u.id}")
@@ -167,7 +174,7 @@ async def join_guard(client, message: Message):
 async def gban_cmd(client, message):
     if not message.reply_to_message: return
     uid = message.reply_to_message.from_user.id
-    GBAN_LIST.add(uid); await message.chat.ban_member(uid); await message.reply("🚫 **GBAN Active!**")
+    GBAN_LIST.add(uid); await message.chat.ban_member(uid); await message.reply("🚫 **Global Ban Active!**")
 
-print("🚀 A1 FINAL TURBO GOD MODE IS LIVE...")
+print("🚀 A1 FINAL TURBO GOD MODE (ALL FEATURES) IS LIVE...")
 app.run()
