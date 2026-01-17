@@ -3,7 +3,7 @@ from PIL import Image
 from pyrogram import Client, filters, errors
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (Bhai dhyan se bharna) ---
 API_ID = 27209067
 API_HASH = "0bb2571bd490320a5c9209d4bf07902e"
 BOT_TOKEN = "" 
@@ -17,10 +17,11 @@ API_SECRET = "BrqWQkJqe3Epgse73zWTwrsYbDgpZG6X"
 BAD_WORDS = ["nude", "sex", "porn", "pussy", "dick", "fucker", "gandu", "bc", "mc", "randi", "loda", "chut", "sexy"]
 DOWNLOAD_DIR = "./downloads/"
 BIO_WARNS = {} 
+GBAN_LIST = set()
 
 if not os.path.exists(DOWNLOAD_DIR): os.makedirs(DOWNLOAD_DIR)
 
-app = Client("A1_EXTREME_SONIC_FINAL", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client("A1_ULTIMATE_GOD_MODE", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # --- UI DESIGNS ---
 
@@ -28,7 +29,7 @@ DM_START_TEXT = """
 ✨ **ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴀ1 ɴsғᴡ ᴅɪʀᴇᴄᴛᴏʀ** ✨
 ━━━━━━━━━━━━━━━━━━━━
 🛡️ **ɪ ᴀᴍ ᴛʜᴇ ᴍᴏsᴛ ᴘᴏᴡᴇʀғᴜʟ ɢᴜᴀʀᴅɪᴀɴ**
-Status: `Extreme Sonic UI Mode Active` 🚀
+Status: `Turbo God Mode Active` 🚀
 ━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -40,14 +41,14 @@ BAN_CARD = """
 👤 **User:** {user}
 🆔 **ID:** `{user_id}`
 📝 **Reason:** `{reason}`
-🛠️ **Action:** `Full Extreme Cleanup + Ban`
+🛠️ **Action:** `Full History Wipe + Ban`
 ━━━━━━━━━━━━━━━━━━━━
 """
 
 # --- CORE TURBO FUNCTIONS ---
 
 async def a1_turbo_cleanup(client, chat_id, user_id):
-    """Background parallel history wipe"""
+    """Background parallel history wipe (500 Limit)"""
     msg_ids = []
     try:
         async for msg in client.get_chat_history(chat_id, limit=500):
@@ -58,7 +59,7 @@ async def a1_turbo_cleanup(client, chat_id, user_id):
                     msg_ids = []
         if msg_ids: await client.delete_messages(chat_id, msg_ids)
     except errors.BotMethodInvalid:
-        print("❌ Cleanup Failed: Upgrade group to Supergroup!")
+        print("❌ Supergroup settings required for history cleanup!")
     except Exception as e: print(f"❌ Cleanup Error: {e}")
 
 def check_nsfw(file_path):
@@ -73,10 +74,8 @@ def check_nsfw(file_path):
     try:
         r = requests.post('https://api.sightengine.com/1.0/check.json', files={'media': open(file_path, 'rb')}, data=params)
         res = r.json()
-        if res.get('status') == 'success':
-            n = res['nudity']
-            # Highly Sensitive Threshold
-            if n['sexual_display'] > 0.10 or n['erotica'] > 0.10: return True
+        if res.get('status') == 'success' and (res['nudity']['sexual_display'] > 0.10 or res['nudity']['erotica'] > 0.10):
+            return True
     except: pass
     return False
 
@@ -89,26 +88,24 @@ async def start_dm(client, message):
 
 @app.on_message(filters.command("scan") & filters.group)
 async def extreme_scan(client, message):
-    progress = await message.reply("🔎 **Extreme Scan in progress...**")
+    progress = await message.reply("🔎 **Scanning group for NSFW content (500 Limit)...**")
     count = 0
     try:
         async for msg in client.get_chat_history(message.chat.id, limit=500):
             if msg.photo or msg.sticker or msg.animation:
-                try:
-                    path = await msg.download(file_name=f"{DOWNLOAD_DIR}scan_{msg.id}")
-                    if check_nsfw(path):
-                        await msg.delete(); count += 1
-                    if os.path.exists(path): os.remove(path)
-                except: pass
-        await progress.edit(f"✅ **Extreme Scan Complete!** {count} items removed.")
+                path = await msg.download(file_name=DOWNLOAD_DIR)
+                if check_nsfw(path):
+                    await msg.delete(); count += 1
+                if os.path.exists(path): os.remove(path)
+        await progress.edit(f"✅ **Scan Complete!** {count} items removed.")
     except errors.BotMethodInvalid:
-        await progress.edit("❌ **Error:** Scan feature only works in **Supergroups**. Please upgrade this group!")
+        await progress.edit("❌ **Error:** Scan feature requires **Supergroup** settings!")
 
 @app.on_message(filters.group & filters.new_chat_members)
 async def extreme_join_guard(client, message: Message):
     for u in message.new_chat_members:
         try:
-            # 1. Profile Photo Scan
+            # 1. PFP Scan
             photos = [p async for p in client.get_chat_photos(u.id, limit=1)]
             if photos:
                 path = await client.download_media(photos[0].file_id, file_name=f"{DOWNLOAD_DIR}pfp_{u.id}.jpg")
@@ -120,7 +117,7 @@ async def extreme_join_guard(client, message: Message):
                 if os.path.exists(path): os.remove(path)
 
             # 2. Bio Link & NSFW Detect
-            full_user = await client.get_chat(u.id)
+            full_user = await client.get_chat(u.id) # Correct method for bio fix
             bio, name = (full_user.bio or "").lower(), f"{u.first_name} {u.username or ''}".lower()
             
             if "http" in bio or "t.me/" in bio:
@@ -134,24 +131,43 @@ async def extreme_join_guard(client, message: Message):
             if any(word in name for word in BAD_WORDS) or any(word in bio for word in BAD_WORDS):
                 await message.chat.ban_member(u.id)
                 await message.reply_text(BAN_CARD.format(user=u.mention, user_id=u.id, reason="NSFW Bio/Name"))
-        except Exception as e: print(f"❌ Join Speed Error: {e}")
+        except Exception as e: print(f"❌ Join Scan Error: {e}")
 
 @app.on_message(filters.group & ~filters.service)
 async def hyper_guard(client, message: Message):
     if not message.from_user: return
-    if message.photo or message.sticker or message.animation or message.video:
+    u_id = message.from_user.id
+    if u_id in GBAN_LIST: await message.chat.ban_member(u_id); await message.delete(); return
+
+    if message.photo or message.sticker or message.animation or message.video or message.document:
         try:
             path = await message.download(file_name=DOWNLOAD_DIR)
-            if check_nsfw(path):
+            is_bad = False
+            if message.document and message.document.file_name.endswith('.zip'):
+                with zipfile.ZipFile(path, 'r') as zf:
+                    z_tmp = f"{DOWNLOAD_DIR}unzip_{message.id}"; zf.extractall(z_tmp)
+                    for r, _, files in os.walk(z_tmp):
+                        for f in files:
+                            if f.lower().endswith(('.jpg', '.png', '.webp')) and check_nsfw(os.path.join(r, f)):
+                                is_bad = True; break
+                    shutil.rmtree(z_tmp)
+            else: is_bad = check_nsfw(path)
+
+            if is_bad:
                 await message.delete() 
-                member = await client.get_chat_member(message.chat.id, message.from_user.id)
+                member = await client.get_chat_member(message.chat.id, u_id)
                 if member.status not in [member.status.ADMINISTRATOR, member.status.OWNER]:
-                    await message.chat.ban_member(message.from_user.id)
-                    # Background history wipe
-                    asyncio.create_task(a1_turbo_cleanup(client, message.chat.id, message.from_user.id))
-                    await message.reply_text(BAN_CARD.format(user=message.from_user.mention, user_id=message.from_user.id, reason="NSFW Media Detected"))
+                    await message.chat.ban_member(u_id)
+                    asyncio.create_task(a1_turbo_cleanup(client, message.chat.id, u_id))
+                    await message.reply_text(BAN_CARD.format(user=message.from_user.mention, user_id=u_id, reason="NSFW Media Detected"))
             if path and os.path.exists(path): os.remove(path)
         except: pass
 
-print("🚀 A1 EXTREME SONIC UI (FIXED) IS LIVE...")
+@app.on_message(filters.command("gban") & filters.user(SUDO_USERS))
+async def gban_cmd(client, message):
+    if not message.reply_to_message: return
+    uid = message.reply_to_message.from_user.id
+    GBAN_LIST.add(uid); await message.chat.ban_member(uid); await message.reply("🚫 **Global Ban Active!**")
+
+print("🚀 A1 FINAL ABSOLUTE GOD MODE IS LIVE...")
 app.run()
